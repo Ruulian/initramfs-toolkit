@@ -1,10 +1,10 @@
 #!/bin/bash
 
 
-# Name: compress-initramfs
+# Name: extract-initramfs
 # Author: Ruulian
 # Version: v1.0
-# Github page: https://github.com/Ruulian/initramfs-toolkit
+# Github: https://github.com/Ruulian/initramfs-toolkit
 
 
 INPUT_FILE=""
@@ -17,7 +17,7 @@ print_help() {
     echo "Usage: $0 initrd/initramfs [-o output_directory] [-f]"
     echo "Options:"
     echo "  -o : Specify the output directory (default: '$OUTPUT_DEFAULT')"
-    echo "  -f : Force creation of output (overwritten if already existing)"
+    echo "  -f : Force creation of output directory (overwritten if already existing)"
     echo "  -h : Print this help message"
 }
 
