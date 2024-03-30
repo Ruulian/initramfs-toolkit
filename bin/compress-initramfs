@@ -6,30 +6,59 @@
 # Github page: https://github.com/Ruulian/initramfs-toolkit
 
 
+declare -A exts
+exts["gzip"]="gz"
+exts["bzip2"]="bz2"
+exts["lz4"]="lz4"
+exts["lzma"]="lzma"
+exts["lzop"]="lzo"
+exts["xz"]="xz"
+exts["zstd"]="zst"
+exts["cpio"]="cpio"
 
-INPUT_FILE=""
-INPUT_DEFAULT="."
+EXTS_LIST_STR="["
 
-INPUT_DIR=$INPUT_DEFAULT
+for ext in "${!exts[@]}"; do
+    EXTS_LIST_STR+=" $ext"
+done
 
-print_help() {
-    echo "Usage: $0 [-o output_initramfs] [-i input_directory]"
+EXTS_LIST_STR+=" ]"
+
+OUTPUT_FILENAME=""
+
+print_help() 
+{
+    echo "Usage: $0 compression_type input_directory [-o output_filename]"
+    echo ""
+    echo "Compression type:"
+    echo "You can choose among the following types: $EXTS_LIST_STR"
+    echo ""
+    echo "Input directory:"
+    echo "Choose the directory fs to archive"
+    echo ""
     echo "Options:"
-    echo "  -o : Specify the input directory (default: '$INPUT_DEFAULT')"
+    echo "  -o : Specify output file name"
     echo "  -h : Print this help message"
 }
 
-if [ ! -f "$1" ]; then
-    print_help
-    exit
-fi
+log_error()
+{
+    echo "Error: $1" 1>&2
+}
 
 
 # Parse options
+if [[ $# -lt 2 ]]; then
+    print_help
+    exit 1
+fi
+
+declare -a args=()
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -i )
-            INPUT_DIR="$2"
+        -o )
+            OUTPUT_FILENAME="$2"
             shift 2
             ;;
         -h )
@@ -37,23 +66,111 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         * )
-            OUTPUT_FILE="$1"
+            args+=($1)
             shift
             ;;
     esac
 done
 
-if [ -z "$OUTPUT_FILE" ]; then
-    print_help
+COMPRESS_TYPE="${args[0]}"
+INPUT_DIR="${args[1]}"
+
+if [ "$(
+    for ext in "${!exts[@]}"; do
+        if [ "$ext" == "$COMPRESS_TYPE" ]; then
+            echo "1"
+            break
+        fi
+    done
+    )" != "1" ]; then
+    log_error "Invalid compression type (-h to display the list)" 1>&2
+    exit 1
+fi
+
+if [ ! -d "$INPUT_DIR" ]; then
+    log_error "No such directory '$INPUT_DIR'"
     exit 1
 fi
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
-# gzip | bzip2 | lz4 | lzma | lzop | xz | zstd
-declare -a exts=(gzip bzip2 lz4 lzma lzop xz zstd)
+# Functions
+compress_gzip()
+{
+    gzip "$1" -c > "${1}.gz"
+    echo "${1}.gz"
+}
 
-INITRAMFS="$(realpath $INPUT_FILE)"
-FILE_TYPE=$(cat "$INITRAMFS" | file -)
-TMP_EXTRACTED="bf072e_extracted.cpio"
+compress_bzip2()
+{
+    bzip2 "$1"
+    echo "${1}.bz2"
+}
 
+compress_lz4()
+{
+    lz4 -c "$1" > "${1}.lz4"
+    echo "${1}.lz4"
+}
+
+compress_lzma()
+{
+    lzma "$1"
+    echo "${1}.lzma"
+}
+
+compress_lzop()
+{
+    lzop "$1"
+    echo "${1}.lzo"
+}
+
+compress_xz()
+{
+    xz "$1"
+    echo "${1}.xz"
+}
+
+compress_zstd()
+{
+    zstd -q "$1" 2> /dev/null
+    echo "${1}.zst"
+}
+
+# Process
+if [ -z "$OUTPUT_FILENAME" ]; then
+    INITRAMFS="initramfs.cpio"
+else
+    INITRAMFS="$OUTPUT_FILENAME"
+fi
+
+TMP="bf072e_dir"
+
+(
+    cp -r "$INPUT_DIR" "$TMP" &&
+    echo "$TMP" &&
+    cd "$TMP" && 
+    (
+        find . -print0 | cpio --quiet --null -ov --format=newc > "../$INITRAMFS"
+    ) &&
+    cd .. &&
+    rm -rf "$TMP"
+) 2>&1 | grep -v '.'
+
+if [ "$COMPRESS_TYPE" == "cpio" ]; then
+    exit
+fi
+
+
+for ext in "${!exts[@]}"; do
+    if [ "$ext" == "$COMPRESS_TYPE" ]; then
+        RES=$(eval "compress_$ext $INITRAMFS")
+        if [ -f "$INITRAMFS" ]; then
+            rm "$INITRAMFS"
+        fi
+        if [ ! -z "$OUTPUT_FILENAME" ]; then
+            mv "$RES" "$OUTPUT_FILENAME"
+        fi
+        break
+    fi
+done

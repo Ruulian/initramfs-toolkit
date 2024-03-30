@@ -24,9 +24,10 @@ The usage for this tool is very basic, here is the help page:
 ```
 env@Ruulian:~$ ./extract-initramfs -h
 Usage: ./extract-initramfs initrd/initramfs [-o output_directory] [-f]
+
 Options:
   -o : Specify the output directory (default: 'initrd-root')
-  -f : Force creation of output (overwritten if already existing)
+  -f : Force creation of output directory (overwrite if already exists)
   -h : Print this help message
 ```
 
@@ -34,11 +35,24 @@ Options:
 
 ### compress-initramfs
 
-TODO
+```
+env@Ruulian:~$ ./compress-initramfs -h
+Usage: ./compress-initramfs compression_type input_directory [-o output_filename]
+
+Compression type:
+You can choose among the following types: [ lzma lz4 xz cpio zstd gzip bzip2 lzop ]
+
+Input directory:
+Choose the directory fs to archive
+
+Options:
+  -o : Specify output file name
+  -h : Print this help message
+```
 
 ## Setup
 
-To use this toolkik, the following packages are needed:
+To use this toolkit, the following packages are needed:
 
 ```
 cpio gzip bzip2 xz-utils zstd lz4 lzop

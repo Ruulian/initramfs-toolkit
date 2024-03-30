@@ -15,15 +15,16 @@ OUTPUT_DIR=$OUTPUT_DEFAULT
 
 print_help() {
     echo "Usage: $0 initrd/initramfs [-o output_directory] [-f]"
+    echo ""
     echo "Options:"
     echo "  -o : Specify the output directory (default: '$OUTPUT_DEFAULT')"
-    echo "  -f : Force creation of output directory (overwritten if already existing)"
+    echo "  -f : Force creation of output directory (overwrite if already exists)"
     echo "  -h : Print this help message"
 }
 
 log_error()
 {
-    echo "Error: $1"
+    echo "Error: $1" 1>&2
 }
 
 
@@ -50,7 +51,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$INPUT_FILE" ]; then
-    log_error "No such file or directory $INPUT_FILE"
+    log_error "No such file or directory '$INPUT_FILE'"
     exit 1
 fi
 
@@ -66,6 +67,14 @@ fi
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 declare -A exts
+exts["gzip"]="zcat"
+exts["bzip2"]="bzcat"
+exts["LZ4"]="lz4cat"
+exts["LZMA"]="lzcat"
+exts["lzop"]="extract_lzop"
+exts["XZ"]="xzcat"
+exts["Zstandard"]="zstdcat"
+exts["cpio"]="cat"
 
 extract_lzop()
 {
@@ -83,15 +92,6 @@ extract_lzop()
     rm $CREATED_FILE
     rm $COPY
 }
-
-exts["gzip"]="zcat"
-exts["bzip2"]="bzcat"
-exts["LZ4"]="lz4cat"
-exts["LZMA"]="lzcat"
-exts["lzop"]="extract_lzop"
-exts["XZ"]="xzcat"
-exts["Zstandard"]="zstdcat"
-exts["cpio"]="cat"
 
 INITRAMFS="$(realpath $INPUT_FILE)"
 FILE_TYPE=$(cat "$INITRAMFS" | file -)
@@ -112,6 +112,6 @@ RES=$(
         ) 2>&1
     )
 
-if [ ! "$RES" == "cpio: premature end of archive" ]; then
+if [ "$RES" != "cpio: premature end of archive" ]; then
     log_error "$RES"
 fi
