@@ -30,7 +30,7 @@ Options:
   -h : Print this help message
 ```
 
-**Note**: This tool also allows to extract concatenated cpios in one archive
+**Note**: This tool allows by default to extract cpios concatenated in one archive
 
 ### compress-initramfs
 
