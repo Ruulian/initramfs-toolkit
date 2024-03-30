@@ -1,5 +1,12 @@
 #!/bin/bash
 
+
+# Name: compress-initramfs
+# Author: Ruulian
+# Version: v1.0
+# Github page: https://github.com/Ruulian/initramfs-toolkit
+
+
 INPUT_FILE=""
 OUTPUT_DEFAULT="initrd-root"
 OVERWRITE=false
