@@ -20,11 +20,13 @@ print_help() {
     echo "  -o : Specify the output directory (default: '$OUTPUT_DEFAULT')"
     echo "  -f : Force creation of output directory (overwrite if already exists)"
     echo "  -h : Print this help message"
+    exit 1
 }
 
 log_error()
 {
     echo "Error: $1" 1>&2
+    exit 1
 }
 
 
@@ -51,13 +53,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$INPUT_FILE" ]; then
+    print_help
+fi
+
+if [ ! -f "$INPUT_FILE" ]; then
     log_error "No such file or directory '$INPUT_FILE'"
-    exit 1
 fi
 
 if [ -d "$OUTPUT_DIR" ] && [ $OVERWRITE == false ]; then
     log_error "Output directory '$OUTPUT_DIR' already exists (specify -f to overwrite)"
-    exit
 else 
     if [ -d "$OUTPUT_DIR" ]; then
         rm -r "$OUTPUT_DIR"
