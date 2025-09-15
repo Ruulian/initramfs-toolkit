@@ -1,9 +1,8 @@
 #!/bin/bash
 
-
 # Name: extract-initramfs
 # Author: Ruulian
-# Version: v1.0
+# Version: v1.1
 # Github: https://github.com/Ruulian/initramfs-toolkit
 
 
@@ -97,25 +96,49 @@ extract_lzop()
     rm $COPY
 }
 
-INITRAMFS="$(realpath $INPUT_FILE)"
-FILE_TYPE=$(cat "$INITRAMFS" | file -)
-TMP_EXTRACTED="bf072e_extracted.cpio"
+extract_part()
+{
+    INITRAMFS="$1"
 
-RES=$(
-        (
-        mkdir -p "$OUTPUT_DIR" &&
-        cd "$OUTPUT_DIR" &&
-        for key in "${!exts[@]}"; do
-            if [[ $FILE_TYPE == *" $key "* ]]; then
-                eval "${exts[$key]} $INITRAMFS > $TMP_EXTRACTED"
-                break
-            fi
-        done &&
-        (while cpio --quiet -id ; do :; done) < "$TMP_EXTRACTED" &&
-        rm "$TMP_EXTRACTED"
-        ) 2>&1
+    START_OFFSET=0
+
+    if [ ! -z "$2" ]; then
+        START_OFFSET="$2"
+    fi
+
+    LEN=$(dd if="$INITRAMFS" skip="$START_OFFSET" status=none | wc -c)
+
+    if [ $LEN == 0 ]; then
+        echo -1
+        return
+    fi
+
+    PART_TYPE=$(dd if="$INITRAMFS" skip="$START_OFFSET" status=none | file -)
+
+    for key in "${!exts[@]}"; do
+        if [[ $PART_TYPE == *" $key "* ]]; then
+            break
+        fi
+    done
+
+    RES=$(
+        dd if="$INITRAMFS" skip="$START_OFFSET" status=none | eval "${exts[$key]} -" | cpio -imdv 2>&1 | grep blocks
     )
+    BLOCKS=$(echo -ne "$RES" | sed -E 's/([0-9]+) blocks/\1/')
 
-if [ "$RES" != "cpio: premature end of archive" ]; then
-    log_error "$RES"
-fi
+    echo $(("$START_OFFSET" + "$BLOCKS"))
+}
+
+INITRAMFS="$(realpath $INPUT_FILE)"
+
+mkdir -p "$OUTPUT_DIR"
+cd "$OUTPUT_DIR"
+
+NEXT=0
+
+while [ "$NEXT" -ge 0 ]; do
+    NEXT=$(extract_part "$INITRAMFS" "$NEXT")
+    echo "$NEXT"
+done
+
+cd -
