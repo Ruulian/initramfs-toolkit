@@ -138,7 +138,6 @@ NEXT=0
 
 while [ "$NEXT" -ge 0 ]; do
     NEXT=$(extract_part "$INITRAMFS" "$NEXT")
-    echo "$NEXT"
 done
 
-cd -
+cd - > /dev/null
